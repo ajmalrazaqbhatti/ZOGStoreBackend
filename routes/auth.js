@@ -144,4 +144,20 @@ router.get('/logout', (req, res) => {
   });
 });
 
+router.get('/status', (req, res) => {
+  console.log('Auth status check endpoint hit');
+  
+  try {
+    const isLoggedIn = req.session && req.session.isAuthenticated === true;
+    
+    res.status(200).json({
+      isAuthenticated: isLoggedIn,
+      user: isLoggedIn ? req.session.user : null
+    });
+  } catch (error) {
+    console.error('Error checking authentication status:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

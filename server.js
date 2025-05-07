@@ -43,7 +43,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/games', gamesRoutes);
-app.use('/', authRoutes);
+app.use('/auth', authRoutes);
 
 // Start server
 app.listen(port, () => {

@@ -1,24 +1,30 @@
+/********************************************************
+ * IMPORTS & SETUP
+ ********************************************************/
 const express = require('express');
 const cors = require('cors'); 
-const session = require('express-session'); // Add session import
+const session = require('express-session');
 require('dotenv').config();
 
-// Import routes
 const gamesRoutes = require('./routes/games');
 const authRoutes = require('./routes/auth');
+const cartRoutes = require('./routes/cart');
+const ordersRoutes = require('./routes/orders');
+const dashboardRoutes = require('./routes/dashboard');
+const adminRoutes = require('./routes/admin');
 
-// setup express app at port 3000
 const app = express();
 const port = process.env.PORT || 3000;
 
-//allow cross-origin requests from the frontend
+/********************************************************
+ * MIDDLEWARE CONFIGURATION
+ ********************************************************/
 app.use(cors({
   origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
 
-// Configure session middleware (add this before routes)
 app.use(session({
   secret: process.env.KEY || 'your-secret-key',
   resave: false,
@@ -29,23 +35,28 @@ app.use(session({
   }
 }));
 
-// parse application/json
 app.use(express.json());
-// Add urlencoded parser for form submissions
 app.use(express.urlencoded({ extended: true }));
 
-// Middleware to log all incoming requests
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path} - Request received`);
   console.log('Request body:', req.body);
   next();
 });
 
-// Routes
+/********************************************************
+ * ROUTES
+ ********************************************************/
 app.use('/games', gamesRoutes);
 app.use('/auth', authRoutes);
+app.use('/cart', cartRoutes);
+app.use('/orders', ordersRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/admin', adminRoutes);
 
-// Start server
+/********************************************************
+ * SERVER INITIALIZATION
+ ********************************************************/
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
   console.log(`Games endpoint: http://localhost:${port}/games`);

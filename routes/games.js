@@ -1,3 +1,6 @@
+/********************************************************
+ * IMPORTS & SETUP
+ ********************************************************/
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -5,6 +8,9 @@ const { isAuthenticated } = require('../middleware/auth');
 
 router.use(isAuthenticated);
 
+/********************************************************
+ * GET ALL GAMES
+ ********************************************************/
 router.get('/', (req, res) => {
   db.query('SELECT * FROM games', (err, results) => {
     if (err) {
@@ -15,6 +21,9 @@ router.get('/', (req, res) => {
   });
 });
 
+/********************************************************
+ * FILTER GAMES BY GENRE
+ ********************************************************/
 router.get('/filter', (req, res) => {
   const { genre } = req.query;
   db.query('SELECT * FROM games WHERE genre = ?', [genre], (err, results) => {
@@ -26,6 +35,9 @@ router.get('/filter', (req, res) => {
   });
 });
 
+/********************************************************
+ * GET ALL GENRES
+ ********************************************************/
 router.get('/genres', (req, res) => {
   db.query('SELECT DISTINCT genre FROM games', (err, results) => {
     if (err) {
@@ -36,7 +48,9 @@ router.get('/genres', (req, res) => {
   });
 });
 
-// New endpoint to search games by title
+/********************************************************
+ * SEARCH GAMES BY TITLE
+ ********************************************************/
 router.get('/search', (req, res) => {
   const { title } = req.query;
   
@@ -44,7 +58,6 @@ router.get('/search', (req, res) => {
     return res.status(400).json({ error: 'Search term is required' });
   }
   
-  // Using LIKE query to search for partial matches, which will utilize the index
   const searchQuery = `SELECT * FROM games WHERE title LIKE ?`;
   db.query(searchQuery, [`%${title}%`], (err, results) => {
     if (err) {
@@ -55,7 +68,9 @@ router.get('/search', (req, res) => {
   });
 });
 
-// New endpoint to get a specific game by ID
+/********************************************************
+ * GET GAME BY ID
+ ********************************************************/
 router.get('/:gameId', (req, res) => {
   const { gameId } = req.params;
   

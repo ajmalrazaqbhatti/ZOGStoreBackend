@@ -29,6 +29,12 @@ Backend server for the ZOG Game Store application.
 - `POST /orders/create` - Create a new order
 - `GET /orders` - Get user orders
 
+### Payments API
+- `GET /payments/methods` - Get available payment methods
+- `GET /payments` - Get all payments (Admin only)
+- `PUT /payments/:paymentId` - Update payment status (Admin only)
+- `GET /payments/stats` - Get payment statistics (Admin only)
+
 ### Dashboard API (Admin Only)
 - `GET /dashboard/stats` - Get overall statistics (users, games, orders, sales)
 - `GET /dashboard/sales-chart?period=X` - Get sales data over time (daily, weekly, monthly)
@@ -36,15 +42,27 @@ Backend server for the ZOG Game Store application.
 
 ### Admin API (Admin Only)
 - `POST /admin/games` - Add a new game
+- `GET /admin/games` - Get all games with inventory data
+- `GET /admin/games/:gameId` - Get specific game for editing
 - `PUT /admin/games/:gameId` - Update game details
 - `DELETE /admin/games/:gameId` - Delete a game
+
+- `GET /admin/inventory` - Get all inventory
 - `POST /admin/inventory` - Update game inventory
-- `GET /admin/users` - Get all users
+- `POST /admin/inventory/bulk` - Bulk update inventory
+
+- `GET /admin/orders` - Get all orders with pagination
+- `GET /admin/orders/:orderId` - Get order details
+- `PUT /admin/orders/:orderId` - Update order status
+
+- `GET /admin/users` - Get all users with pagination
+- `GET /admin/users/:userId` - Get user details with order history
 - `PUT /admin/users/:userId` - Update user role
+- `PUT /admin/users/:userId/status` - Enable/disable user account
 
 ## Role-Based Access
 - Regular Users: Can browse games, add to cart, place orders, and view order history
-- Admin Users: Can access dashboard, manage games, inventory, and user roles
+- Admin Users: Can access dashboard, manage games, inventory, orders, and user roles
 
 ## Setup
 

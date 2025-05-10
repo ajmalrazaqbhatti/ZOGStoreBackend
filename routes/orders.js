@@ -14,7 +14,7 @@ router.use(isAuthenticated);
  ********************************************************/
 router.post('/create', isRegularUser, (req, res) => {
   const userId = req.session.user.id;
-  const { paymentMethod } = req.body; 
+  const { paymentMethod } = req.body;
   db.beginTransaction(err => {
     if (err) {
       console.error('Error starting transaction:', err);
@@ -149,8 +149,8 @@ router.get('/', isRegularUser, (req, res) => {
   const statusFilter = req.query.status;
   
   let query = `
-    SELECT o.order_id, o.total_amount, o.order_date, 
-           p.payment_method, p.payment_status
+    SELECT o.order_id, o.total_amount, o.order_date, o.status as order_status,
+           p.payment_method
     FROM orders o
     LEFT JOIN payments p ON o.order_id = p.order_id
     WHERE o.user_id = ?
@@ -158,18 +158,17 @@ router.get('/', isRegularUser, (req, res) => {
   
   const queryParams = [userId];
   if (statusFilter && statusFilter !== 'All') {
-    query += ` AND p.payment_status = ?`;
+    query += ` AND o.status = ?`;
     queryParams.push(statusFilter);
   }
   
   query += ` ORDER BY o.order_date DESC`;
   
   const countQuery = `
-    SELECT p.payment_status as status, COUNT(*) as count
+    SELECT o.status as status, COUNT(*) as count
     FROM orders o
-    LEFT JOIN payments p ON o.order_id = p.order_id
     WHERE o.user_id = ?
-    GROUP BY p.payment_status
+    GROUP BY o.status
   `;
   
   db.query(countQuery, [userId], (err, statusResults) => {
@@ -202,7 +201,7 @@ router.get('/', isRegularUser, (req, res) => {
       const orderIds = orders.map(order => order.order_id);
       const itemsQuery = `
         SELECT oi.order_id, oi.order_item_id, oi.game_id, oi.quantity,
-               g.title, g.price, (g.price * oi.quantity) AS subtotal
+               g.title, g.price, g.gameicon, (g.price * oi.quantity) AS subtotal
         FROM order_items oi
         JOIN games g ON oi.game_id = g.game_id
         WHERE oi.order_id IN (?)

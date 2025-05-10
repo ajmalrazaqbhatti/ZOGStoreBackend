@@ -93,6 +93,7 @@ The application implements centralized error handling with:
 ### Orders API (Regular Users Only)
 - `POST /orders/create` - Create a new order
 - `GET /orders` - Get user orders
+- `GET /orders/search` - Search orders with filters (orderId, date range, game title, status)
 
 ### Dashboard API (Admin Only)
 - `GET /dashboard/stats` - Get overall statistics (users, games, orders, sales)
@@ -110,6 +111,7 @@ The application implements centralized error handling with:
 
 - Order Management
   - `GET /admin/orders` - Get all orders with details
+  - `GET /admin/orders/search` - Search orders (orderId, customer name)
   - `PUT /admin/orders/:orderId/status` - Update order status
   - `DELETE /admin/orders/:orderId` - Delete an order
 

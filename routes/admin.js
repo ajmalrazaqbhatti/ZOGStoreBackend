@@ -21,10 +21,11 @@ router.post('/games/insert', (req, res) => {
     return res.status(400).json({ message: 'Required fields missing' });
   }
   
+  // Include created_at in the query, setting it to current timestamp
   const query = `
     INSERT INTO games 
-    (title, description, price, platform, genre, gameicon) 
-    VALUES (?, ?, ?, ?, ?, ?)
+    (title, description, price, platform, genre, gameicon, created_at) 
+    VALUES (?, ?, ?, ?, ?, ?, NOW())
   `;
   
   db.query(
@@ -36,24 +37,25 @@ router.post('/games/insert', (req, res) => {
         return res.status(500).json({ message: 'Error adding game' });
       }
       
-      // Add initial inventory if stock quantity is provided
-      if (req.body.stock_quantity !== undefined) {
-        db.query(
-          'INSERT INTO inventory (game_id, stock_quantity) VALUES (?, ?)',
-          [result.insertId, req.body.stock_quantity],
-          (err) => {
-            if (err) {
-              console.error('Error adding inventory:', err);
-              // Continue despite inventory error
-            }
-          }
-        );
-      }
+      // Get stock quantity or use default of 0
+      const stockQuantity = req.body.stock_quantity !== undefined ? req.body.stock_quantity : 0;
       
-      return res.status(201).json({
-        message: 'Game added successfully',
-        gameId: result.insertId
-      });
+      // Always create inventory record with stock quantity (default 0 if not provided)
+      db.query(
+        'INSERT INTO inventory (game_id, stock_quantity) VALUES (?, ?)',
+        [result.insertId, stockQuantity],
+        (err) => {
+          if (err) {
+            console.error('Error adding inventory:', err);
+          }
+          
+          return res.status(201).json({
+            message: 'Game added successfully',
+            gameId: result.insertId,
+            stockQuantity: stockQuantity
+          });
+        }
+      );
     }
   );
 });
@@ -117,20 +119,6 @@ router.put('/games/update/:gameId', (req, res) => {
       return res.status(404).json({ message: 'Game not found' });
     }
     
-    // Update inventory if stock quantity is provided
-    if (req.body.stockQuantity !== undefined) {
-      db.query(
-        'INSERT INTO inventory (game_id, stock_quantity) VALUES (?, ?) ON DUPLICATE KEY UPDATE stock_quantity = ?',
-        [gameId, req.body.stockQuantity, req.body.stockQuantity],
-        (err) => {
-          if (err) {
-            console.error('Error updating inventory:', err);
-            // Continue despite inventory error
-          }
-        }
-      );
-    }
-    
     return res.status(200).json({
       message: 'Game updated successfully',
       gameId: gameId
@@ -153,91 +141,110 @@ router.delete('/games/delete/:gameId', (req, res) => {
       return res.status(500).json({ message: 'Error deleting game' });
     }
     
-    // Check if game exists in cart or orders
-    const checkQuery = `
-      SELECT 
-        (SELECT COUNT(*) FROM cart WHERE game_id = ?) as cart_count,
-        (SELECT COUNT(*) FROM order_items WHERE game_id = ?) as order_count
-    `;
-    
-    db.query(checkQuery, [gameId, gameId], (err, results) => {
-      if (err) {
-        return db.rollback(() => {
-          console.error('Error checking game usage:', err);
-          res.status(500).json({ message: 'Error deleting game' });
-        });
-      }
-      const { cart_count, order_count } = results[0];
-      if (cart_count > 0 || order_count > 0) {
-        return db.rollback(() => {
-          res.status(400).json({ 
-            message: 'Cannot delete game that is in active carts or orders',
-            inCart: cart_count > 0,
-            inOrders: order_count > 0
-          });
-        });
-      }
-      
-      // First, delete from order_items if they exist (this is a safety check even though we already checked)
-      db.query('DELETE FROM order_items WHERE game_id = ?', [gameId], (err) => {
+    // First check if game exists in any cart
+    db.query('SELECT COUNT(*) as cart_count FROM cart WHERE game_id = ?', 
+      [gameId], 
+      (err, cartResults) => {
         if (err) {
           return db.rollback(() => {
-            console.error('Error deleting from order_items:', err);
+            console.error('Error checking cart usage:', err);
             res.status(500).json({ message: 'Error deleting game' });
           });
         }
         
-        // Delete from cart if they exist (this is a safety check even though we already checked)
-        db.query('DELETE FROM cart WHERE game_id = ?', [gameId], (err) => {
+        const cartCount = cartResults[0].cart_count;
+        
+        if (cartCount > 0) {
+          return db.rollback(() => {
+            res.status(400).json({ 
+              message: 'Cannot delete game that is in active carts',
+              inCart: true,
+              inOrders: false
+            });
+          });
+        }
+        
+        // Check if game exists in active orders (not shipped, delivered or canceled)
+        const activeOrderQuery = `
+          SELECT COUNT(*) as active_order_count 
+          FROM order_items oi
+          JOIN orders o ON oi.order_id = o.order_id
+          WHERE oi.game_id = ? 
+          AND o.status NOT IN ('shipped', 'delivered', 'canceled')
+        `;
+        
+        db.query(activeOrderQuery, [gameId], (err, orderResults) => {
           if (err) {
             return db.rollback(() => {
-              console.error('Error deleting from cart:', err);
+              console.error('Error checking order usage:', err);
               res.status(500).json({ message: 'Error deleting game' });
             });
           }
           
-          // Delete from inventory
-          db.query('DELETE FROM inventory WHERE game_id = ?', [gameId], (err) => {
+          const activeOrderCount = orderResults[0].active_order_count;
+          
+          if (activeOrderCount > 0) {
+            return db.rollback(() => {
+              res.status(400).json({ 
+                message: 'Cannot delete game that is in active orders',
+                inCart: false,
+                inOrders: true
+              });
+            });
+          }
+          
+          // Delete from cart just in case (safety check)
+          db.query('DELETE FROM cart WHERE game_id = ?', [gameId], (err) => {
             if (err) {
               return db.rollback(() => {
-                console.error('Error deleting from inventory:', err);
+                console.error('Error deleting from cart:', err);
                 res.status(500).json({ message: 'Error deleting game' });
               });
             }
             
-            // Now delete the game
-            db.query('DELETE FROM games WHERE game_id = ?', [gameId], (err, result) => {
+            // First update inventory to set stock to 0
+            db.query('UPDATE inventory SET stock_quantity = 0 WHERE game_id = ?', [gameId], (err) => {
               if (err) {
                 return db.rollback(() => {
-                  console.error('Error deleting game:', err);
+                  console.error('Error updating inventory:', err);
                   res.status(500).json({ message: 'Error deleting game' });
                 });
               }
               
-              if (result.affectedRows === 0) {
-                return db.rollback(() => {
-                  res.status(404).json({ message: 'Game not found' });
-                });
-              }
-              
-              db.commit((err) => {
+              // Then mark the game as deleted
+              db.query('UPDATE games SET is_deleted = TRUE WHERE game_id = ?', [gameId], (err, result) => {
                 if (err) {
                   return db.rollback(() => {
-                    console.error('Error committing transaction:', err);
+                    console.error('Error soft deleting game:', err);
                     res.status(500).json({ message: 'Error deleting game' });
                   });
                 }
                 
-                return res.status(200).json({
-                  message: 'Game deleted successfully',
-                  gameId: gameId
+                if (result.affectedRows === 0) {
+                  return db.rollback(() => {
+                    res.status(404).json({ message: 'Game not found' });
+                  });
+                }
+                
+                db.commit((err) => {
+                  if (err) {
+                    return db.rollback(() => {
+                      console.error('Error committing transaction:', err);
+                      res.status(500).json({ message: 'Error deleting game' });
+                    });
+                  }
+                  
+                  return res.status(200).json({
+                    message: 'Game deleted successfully',
+                    gameId: gameId
+                  });
                 });
               });
             });
           });
         });
-      });
-    });
+      }
+    );
   });
 });
 

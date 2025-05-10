@@ -201,9 +201,12 @@ router.get('/', isRegularUser, (req, res) => {
       const orderIds = orders.map(order => order.order_id);
       const itemsQuery = `
         SELECT oi.order_id, oi.order_item_id, oi.game_id, oi.quantity,
-               g.title, g.price, g.gameicon, (g.price * oi.quantity) AS subtotal
+               IFNULL(g.title, 'Product No Longer Available') as title, 
+               IFNULL(g.price, 0) as price, 
+               IFNULL(g.gameicon, '') as gameicon, 
+               (IFNULL(g.price, 0) * oi.quantity) AS subtotal
         FROM order_items oi
-        JOIN games g ON oi.game_id = g.game_id
+        LEFT JOIN games g ON oi.game_id = g.game_id
         WHERE oi.order_id IN (?)
       `;
       
@@ -218,7 +221,13 @@ router.get('/', isRegularUser, (req, res) => {
           if (!itemsByOrder[item.order_id]) {
             itemsByOrder[item.order_id] = [];
           }
-          itemsByOrder[item.order_id].push(item);
+          itemsByOrder[item.order_id].push({
+            ...item,
+            title: item.title || 'Unknown',
+            price: item.price || 0,
+            gameicon: item.gameicon || 'default-icon.png',
+            subtotal: item.subtotal || 0
+          });
         });
         
         const ordersWithItems = orders.map(order => ({

@@ -12,7 +12,7 @@ router.use(isAuthenticated);
  * GET ALL GAMES
  ********************************************************/
 router.get('/', (req, res) => {
-  db.query('SELECT * FROM games', (err, results) => {
+  db.query('SELECT * FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL', (err, results) => {
     if (err) {
       res.status(500).send('Error fetching data');
     } else {
@@ -26,7 +26,7 @@ router.get('/', (req, res) => {
  ********************************************************/
 router.get('/filter', (req, res) => {
   const { genre } = req.query;
-  db.query('SELECT * FROM games WHERE genre = ?', [genre], (err, results) => {
+  db.query('SELECT * FROM games WHERE genre = ? AND (is_deleted = FALSE OR is_deleted IS NULL)', [genre], (err, results) => {
     if (err) {
       res.status(500).send('Error fetching data');
     } else {
@@ -39,7 +39,7 @@ router.get('/filter', (req, res) => {
  * GET ALL GENRES
  ********************************************************/
 router.get('/genres', (req, res) => {
-  db.query('SELECT DISTINCT genre FROM games', (err, results) => {
+  db.query('SELECT DISTINCT genre FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL', (err, results) => {
     if (err) {
       res.status(500).send('Error fetching genre data');
     } else {
@@ -58,7 +58,7 @@ router.get('/search', (req, res) => {
     return res.status(400).json({ error: 'Search term is required' });
   }
   
-  const searchQuery = `SELECT * FROM games WHERE title LIKE ?`;
+  const searchQuery = `SELECT * FROM games WHERE title LIKE ? AND (is_deleted = FALSE OR is_deleted IS NULL)`;
   db.query(searchQuery, [`%${title}%`], (err, results) => {
     if (err) {
       console.error('Search error:', err);
@@ -78,7 +78,7 @@ router.get('/:gameId', (req, res) => {
     SELECT games.*, inventory.stock_quantity 
     FROM games 
     LEFT JOIN inventory ON games.game_id = inventory.game_id 
-    WHERE games.game_id = ?
+    WHERE games.game_id = ? AND (games.is_deleted = FALSE OR games.is_deleted IS NULL)
   `;
   
   db.query(query, [gameId], (err, results) => {

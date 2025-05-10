@@ -103,3 +103,30 @@ The schema enforces several important constraints:
 3. **Soft Deletion**
    - Games use soft deletion (setting `is_deleted` flag to TRUE) instead of being removed from the database
    - This preserves order history integrity while hiding discontinued games from the storefront
+
+### Database Triggers
+
+The database implements several automatic triggers to maintain data integrity and automate common operations:
+
+1. **decrease_inventory_after_order**
+   - Triggers: AFTER INSERT ON `order_items`
+   - Function: Automatically decreases the inventory stock quantity when a new order item is created
+   - Implementation:
+     ```sql
+     UPDATE inventory
+     SET stock_quantity = stock_quantity - NEW.quantity
+     WHERE game_id = NEW.game_id;
+     ```
+   - Purpose: Ensures inventory is immediately updated when items are purchased
+
+2. **clear_cart_after_order**
+   - Triggers: AFTER INSERT ON `orders`
+   - Function: Automatically clears a user's cart after they complete an order
+   - Implementation:
+     ```sql
+     DELETE FROM cart
+     WHERE user_id = NEW.user_id;
+     ```
+   - Purpose: Prevents duplicate purchases and maintains a clean shopping experience
+
+These triggers help maintain data consistency and automate workflows within the application, reducing the need for manual intervention and preventing common data integrity issues.

@@ -101,57 +101,6 @@ router.get('/stats', (req, res) => {
 });
 
 /********************************************************
- * GET SALES OVER TIME
- ********************************************************/
-router.get('/sales-chart', (req, res) => {
-  const { period = 'monthly' } = req.query;
-  
-  // Set up different time grouping based on period
-  let timeFormat;
-  let groupBy;
-  
-  switch(period) {
-    case 'daily':
-      // Format: 2023-01-15
-      timeFormat = '%Y-%m-%d';
-      groupBy = 'DATE(order_date)';
-      break;
-    case 'weekly':
-      // Format: 2023-03 (year and week number)
-      timeFormat = '%Y-%u';
-      groupBy = 'YEAR(order_date), WEEK(order_date)';
-      break;
-    case 'monthly':
-    default:
-      // Format: 2023-03 (year and month)
-      timeFormat = '%Y-%m';
-      groupBy = 'YEAR(order_date), MONTH(order_date)';
-      break;
-  }
-  
-  // Get sales data grouped by time period
-  const query = `
-    SELECT 
-      DATE_FORMAT(order_date, '${timeFormat}') as time_period,
-      SUM(total_amount) as sales,
-      COUNT(*) as order_count
-    FROM orders
-    GROUP BY ${groupBy}
-    ORDER BY MIN(order_date) ASC
-    LIMIT 12
-  `;
-  
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error('Error fetching sales chart data:', err);
-      return res.status(500).json({ message: 'Error fetching sales chart data' });
-    }
-    
-    res.json(results);
-  });
-});
-
-/********************************************************
  * GET TOP SELLING GAMES
  ********************************************************/
 router.get('/top-games', (req, res) => {

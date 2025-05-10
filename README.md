@@ -40,7 +40,6 @@ Backend server for the ZOG Game Store application - a full-featured e-commerce p
 
 ### Dashboard API (Admin Only)
 - `GET /dashboard/stats` - Get overall statistics (users, games, orders, sales)
-- `GET /dashboard/sales-chart?period=X` - Get sales data over time (daily, weekly, monthly)
 - `GET /dashboard/top-games?limit=X` - Get top selling games
 
 ### Admin API (Admin Only)
@@ -51,7 +50,6 @@ Backend server for the ZOG Game Store application - a full-featured e-commerce p
 
 - Inventory Management
   - `GET /admin/inventory` - Get all inventory
-  - `GET /admin/inventory/:gameId` - Get inventory for specific game
   - `PUT /admin/inventory/:gameId` - Update game inventory
 
 - Order Management
@@ -61,7 +59,6 @@ Backend server for the ZOG Game Store application - a full-featured e-commerce p
 
 - User Management
   - `GET /admin/users` - Get all users
-  - `GET /admin/users/:userId` - Get user details
   - `PUT /admin/users/:userId` - Update user information
   - `PUT /admin/users/:userId/password` - Update user password
   - `DELETE /admin/users/:userId` - Delete a user

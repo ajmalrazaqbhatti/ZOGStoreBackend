@@ -279,36 +279,6 @@ router.get('/inventory', (req, res) => {
   });
 });
 
-// Get inventory for a specific game with image
-router.get('/inventory/:gameId', (req, res) => {
-  const { gameId } = req.params;
-  
-  if (!gameId) {
-    return res.status(400).json({ message: 'Game ID is required' });
-  }
-  
-  // Get inventory for a specific game with details
-  const query = `
-    SELECT i.inventory_id, i.game_id, i.stock_quantity, g.title, g.gameicon
-    FROM inventory i
-    JOIN games g ON i.game_id = g.game_id
-    WHERE i.game_id = ?
-  `;
-  
-  db.query(query, [gameId], (err, results) => {
-    if (err) {
-      console.error('Error fetching game inventory:', err);
-      return res.status(500).json({ message: 'Error fetching game inventory' });
-    }
-    
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'Inventory not found for this game' });
-    }
-    
-    return res.status(200).json(results[0]);
-  });
-});
-
 // Update inventory quantity for a game
 router.put('/inventory/:gameId', (req, res) => {
   const { gameId } = req.params;
@@ -572,35 +542,6 @@ router.get('/users', (req, res) => {
     }
     
     return res.status(200).json(results);
-  });
-});
-
-// Get specific user
-router.get('/users/:userId', (req, res) => {
-  const { userId } = req.params;
-  
-  if (!userId) {
-    return res.status(400).json({ message: 'User ID is required' });
-  }
-  
-  // Get user details (excluding password)
-  const query = `
-    SELECT user_id, username, email, created_at, role
-    FROM users
-    WHERE user_id = ?
-  `;
-  
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error('Error fetching user:', err);
-      return res.status(500).json({ message: 'Error fetching user' });
-    }
-    
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    return res.status(200).json(results[0]);
   });
 });
 

@@ -1,6 +1,15 @@
 # ZOG Store Backend
 
-Backend server for the ZOG Game Store application.
+Backend server for the ZOG Game Store application - a full-featured e-commerce platform for video games.
+
+## Features
+
+- User authentication and authorization with role-based access control
+- Game catalog with search, filtering, and detailed game information
+- Shopping cart functionality with stock quantity validation
+- Order processing and history
+- Admin dashboard with sales analytics
+- User, product, and order management for administrators
 
 ## API Endpoints
 
@@ -29,36 +38,33 @@ Backend server for the ZOG Game Store application.
 - `POST /orders/create` - Create a new order
 - `GET /orders` - Get user orders
 
-### Payments API
-- `GET /payments/methods` - Get available payment methods
-- `GET /payments` - Get all payments (Admin only)
-- `PUT /payments/:paymentId` - Update payment status (Admin only)
-- `GET /payments/stats` - Get payment statistics (Admin only)
-
 ### Dashboard API (Admin Only)
 - `GET /dashboard/stats` - Get overall statistics (users, games, orders, sales)
 - `GET /dashboard/sales-chart?period=X` - Get sales data over time (daily, weekly, monthly)
 - `GET /dashboard/top-games?limit=X` - Get top selling games
 
 ### Admin API (Admin Only)
-- `POST /admin/games` - Add a new game
-- `GET /admin/games` - Get all games with inventory data
-- `GET /admin/games/:gameId` - Get specific game for editing
-- `PUT /admin/games/:gameId` - Update game details
-- `DELETE /admin/games/:gameId` - Delete a game
+- Game Management
+  - `POST /admin/games/insert` - Add a new game
+  - `PUT /admin/games/update/:gameId` - Update game details
+  - `DELETE /admin/games/delete/:gameId` - Delete a game
 
-- `GET /admin/inventory` - Get all inventory
-- `POST /admin/inventory` - Update game inventory
-- `POST /admin/inventory/bulk` - Bulk update inventory
+- Inventory Management
+  - `GET /admin/inventory` - Get all inventory
+  - `GET /admin/inventory/:gameId` - Get inventory for specific game
+  - `PUT /admin/inventory/:gameId` - Update game inventory
 
-- `GET /admin/orders` - Get all orders with pagination
-- `GET /admin/orders/:orderId` - Get order details
-- `PUT /admin/orders/:orderId` - Update order status
+- Order Management
+  - `GET /admin/orders` - Get all orders with details
+  - `PUT /admin/orders/:orderId/status` - Update order status
+  - `DELETE /admin/orders/:orderId` - Delete an order
 
-- `GET /admin/users` - Get all users with pagination
-- `GET /admin/users/:userId` - Get user details with order history
-- `PUT /admin/users/:userId` - Update user role
-- `PUT /admin/users/:userId/status` - Enable/disable user account
+- User Management
+  - `GET /admin/users` - Get all users
+  - `GET /admin/users/:userId` - Get user details
+  - `PUT /admin/users/:userId` - Update user information
+  - `PUT /admin/users/:userId/password` - Update user password
+  - `DELETE /admin/users/:userId` - Delete a user
 
 ## Role-Based Access
 - Regular Users: Can browse games, add to cart, place orders, and view order history
@@ -67,7 +73,10 @@ Backend server for the ZOG Game Store application.
 ## Setup
 
 1. Clone the repository
-2. Install dependencies: `npm install`
+2. Install dependencies:
+   ```
+   npm install
+   ```
 3. Create a `.env` file with the following variables:
    ```
    PORT=3000
@@ -78,4 +87,18 @@ Backend server for the ZOG Game Store application.
    DB_NAME=gamestore
    KEY=your_session_secret_key
    ```
-4. Start the server: `npm start`
+4. Start the server:
+   ```
+   npm start
+   ```
+   For development with auto-reload:
+   ```
+   npm run dev
+   ```
+
+## Technologies Used
+- Node.js
+- Express.js
+- MySQL
+- bcrypt for password hashing
+- express-session for authentication

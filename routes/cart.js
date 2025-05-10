@@ -6,9 +6,9 @@ const router = express.Router();
 const db = require('../db');
 const { isAuthenticated, isRegularUser } = require('../middleware/auth');
 
-// Apply authentication check to all routes
+// Make sure user is logged in for cart operations
 router.use(isAuthenticated);
-// Apply regular user check to all cart operations
+// Only regular users can use the cart (not admins)
 router.use(isRegularUser);
 
 /********************************************************
@@ -17,6 +17,7 @@ router.use(isRegularUser);
 router.get('/', (req, res) => {
   const userId = req.session.user.id;
   
+  // Get cart items with game details and calculate subtotals
   const query = `
     SELECT c.cart_id, c.user_id, c.game_id, c.quantity, 
            g.title, g.price, g.gameicon, 
@@ -24,6 +25,7 @@ router.get('/', (req, res) => {
     FROM cart c
     JOIN games g ON c.game_id = g.game_id
     WHERE c.user_id = ?
+    ORDER BY c.cart_id DESC
   `;
   
   db.query(query, [userId], (err, results) => {
@@ -32,6 +34,7 @@ router.get('/', (req, res) => {
       return res.status(500).json({ message: 'Error fetching cart items' });
     }
     
+    // Calculate the total price of all items
     const total = results.reduce((sum, item) => sum + item.subtotal, 0);
     
     res.json({
@@ -48,6 +51,7 @@ router.get('/', (req, res) => {
 router.get('/count', (req, res) => {
   const userId = req.session.user.id;
   
+  // Just count how many items are in the cart
   const query = 'SELECT COUNT(*) as itemCount FROM cart WHERE user_id = ?';
   
   db.query(query, [userId], (err, results) => {
@@ -73,6 +77,7 @@ router.post('/add', (req, res) => {
     return res.status(400).json({ message: 'Game ID is required' });
   }
   
+  // First check if we have enough stock
   db.query('SELECT stock_quantity FROM inventory WHERE game_id = ?', 
     [gameId],
     (err, inventoryResults) => {
@@ -87,6 +92,7 @@ router.post('/add', (req, res) => {
       
       const availableQuantity = inventoryResults[0].stock_quantity;
       
+      // Don't let users add more than what's in stock
       if (quantity > availableQuantity) {
         return res.status(400).json({ 
           message: 'Requested quantity exceeds available stock',
@@ -94,6 +100,7 @@ router.post('/add', (req, res) => {
         });
       }
       
+      // Check if the game is already in the cart
       db.query('SELECT * FROM cart WHERE user_id = ? AND game_id = ?', 
         [userId, gameId], 
         (err, results) => {
@@ -103,12 +110,14 @@ router.post('/add', (req, res) => {
           }
           
           if (results.length > 0) {
+            // Item already in cart - return error and suggest using update instead
             return res.status(400).json({ 
               message: 'Item already exists in cart. Use update endpoint to modify quantity.',
               cartId: results[0].cart_id,
               currentQuantity: results[0].quantity
             });
           } else {
+            // Add new item to cart
             db.query('INSERT INTO cart (user_id, game_id, quantity) VALUES (?, ?, ?)',
               [userId, gameId, quantity],
               (err, insertResult) => {
@@ -147,6 +156,7 @@ router.post('/update', (req, res) => {
     return res.status(400).json({ message: 'Valid quantity is required' });
   }
   
+  // Check if this cart item belongs to the current user and get stock info
   db.query('SELECT c.*, i.stock_quantity FROM cart c JOIN inventory i ON c.game_id = i.game_id WHERE c.cart_id = ? AND c.user_id = ?', 
     [cartId, userId], 
     (err, results) => {
@@ -162,6 +172,7 @@ router.post('/update', (req, res) => {
       const availableQuantity = results[0].stock_quantity;
       const currentQuantity = results[0].quantity;
       
+      // Don't let users update to more than what's in stock
       if (quantity > availableQuantity) {
         return res.status(400).json({ 
           message: 'Requested quantity exceeds available stock',
@@ -170,6 +181,7 @@ router.post('/update', (req, res) => {
         });
       }
       
+      // If quantity isn't changing, don't bother with the update
       if (quantity === currentQuantity) {
         return res.status(200).json({
           message: 'No change in quantity',
@@ -179,6 +191,7 @@ router.post('/update', (req, res) => {
         });
       }
       
+      // Update the cart item quantity
       db.query('UPDATE cart SET quantity = ? WHERE cart_id = ?',
         [quantity, cartId],
         (err, updateResult) => {
@@ -205,6 +218,7 @@ router.post('/update', (req, res) => {
 router.delete('/', (req, res) => {
   const userId = req.session.user.id;
   
+  // Remove all items from user's cart
   db.query('DELETE FROM cart WHERE user_id = ?', 
     [userId], 
     (err, result) => {
@@ -232,6 +246,7 @@ router.post('/remove', (req, res) => {
     return res.status(400).json({ message: 'Cart ID is required' });
   }
   
+  // Check if this cart item belongs to the current user
   db.query('SELECT * FROM cart WHERE cart_id = ? AND user_id = ?', 
     [cartId, userId], 
     (err, results) => {
@@ -244,6 +259,7 @@ router.post('/remove', (req, res) => {
         return res.status(404).json({ message: 'Cart item not found or unauthorized' });
       }
       
+      // Remove the item from cart
       db.query('DELETE FROM cart WHERE cart_id = ?',
         [cartId],
         (err, deleteResult) => {

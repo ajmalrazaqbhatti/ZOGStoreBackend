@@ -6,7 +6,7 @@ const router = express.Router();
 const db = require('../db');
 const { isAuthenticated, isRegularUser } = require('../middleware/auth');
 
-// Apply authentication check to all routes
+// Make sure user is logged in for order operations
 router.use(isAuthenticated);
 
 /********************************************************
@@ -15,12 +15,15 @@ router.use(isAuthenticated);
 router.post('/create', isRegularUser, (req, res) => {
   const userId = req.session.user.id;
   const { paymentMethod } = req.body;
+  
+  // Start a database transaction to ensure all operations succeed or fail together
   db.beginTransaction(err => {
     if (err) {
       console.error('Error starting transaction:', err);
       return res.status(500).json({ message: 'Server error' });
     }
     
+    // Get all items from the user's cart with game info and stock levels
     const cartQuery = `
       SELECT c.cart_id, c.game_id, c.quantity, 
              g.price, i.stock_quantity
@@ -38,12 +41,14 @@ router.post('/create', isRegularUser, (req, res) => {
         });
       }
       
+      // Can't create an order with an empty cart
       if (cartItems.length === 0) {
         return db.rollback(() => {
           res.status(400).json({ message: 'Cart is empty' });
         });
       }
       
+      // Check if any items are out of stock
       let isOutOfStock = false;
       let outOfStockItem = null;
       
@@ -64,8 +69,10 @@ router.post('/create', isRegularUser, (req, res) => {
         });
       }
       
+      // Calculate the total order amount
       const totalAmount = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       
+      // Create the order
       db.query('INSERT INTO orders (user_id, total_amount) VALUES (?, ?)',
         [userId, totalAmount],
         (err, orderResult) => {
@@ -78,12 +85,14 @@ router.post('/create', isRegularUser, (req, res) => {
           
           const orderId = orderResult.insertId;
           
+          // Prepare order items data
           const orderItems = cartItems.map(item => [
             orderId,
             item.game_id,
             item.quantity
           ]);
           
+          // Insert all order items
           db.query('INSERT INTO order_items (order_id, game_id, quantity) VALUES ?',
             [orderItems],
             (err, itemsResult) => {
@@ -94,6 +103,7 @@ router.post('/create', isRegularUser, (req, res) => {
                 });
               }
               
+              // Create the payment record
               db.query(
                 'INSERT INTO payments (order_id, payment_method) VALUES (?, ?)',
                 [orderId, paymentMethod || 'Credit Card'],
@@ -105,6 +115,7 @@ router.post('/create', isRegularUser, (req, res) => {
                     });
                   }
                   
+                  // Clear the cart after successful order creation
                   db.query('DELETE FROM cart WHERE user_id = ?', [userId], (err, clearResult) => {
                     if (err) {
                       return db.rollback(() => {
@@ -113,6 +124,7 @@ router.post('/create', isRegularUser, (req, res) => {
                       });
                     }
                     
+                    // Everything went well, commit the transaction!
                     db.commit(err => {
                       if (err) {
                         return db.rollback(() => {
@@ -121,6 +133,7 @@ router.post('/create', isRegularUser, (req, res) => {
                         });
                       }
                       
+                      // Return the order details
                       res.status(201).json({
                         message: 'Order created successfully',
                         orderId: orderId,
@@ -148,6 +161,7 @@ router.get('/', isRegularUser, (req, res) => {
   const userId = req.session.user.id;
   const statusFilter = req.query.status;
   
+  // Get orders with payment info
   let query = `
     SELECT o.order_id, o.total_amount, o.order_date, o.status as order_status,
            p.payment_method
@@ -157,18 +171,23 @@ router.get('/', isRegularUser, (req, res) => {
   `;
   
   const queryParams = [userId];
+  
+  // Add status filter if provided
   if (statusFilter && statusFilter !== 'All') {
     query += ` AND o.status = ?`;
     queryParams.push(statusFilter);
   }
   
-  query += ` ORDER BY o.order_date DESC`;
+  // Sort by ID, newest first
+  query += ` ORDER BY o.order_id DESC`;
   
+  // Get counts by status for displaying tabs/filters
   const countQuery = `
     SELECT o.status as status, COUNT(*) as count
     FROM orders o
     WHERE o.user_id = ?
     GROUP BY o.status
+    ORDER BY o.status DESC
   `;
   
   db.query(countQuery, [userId], (err, statusResults) => {
@@ -177,6 +196,7 @@ router.get('/', isRegularUser, (req, res) => {
       return res.status(500).json({ message: 'Error fetching orders' });
     }
     
+    // Format the status counts
     const statusCounts = {};
     let totalCount = 0;
     
@@ -185,12 +205,14 @@ router.get('/', isRegularUser, (req, res) => {
       totalCount += row.count;
     });
     
+    // Get the actual orders
     db.query(query, queryParams, (err, orders) => {
       if (err) {
         console.error('Error fetching orders:', err);
         return res.status(500).json({ message: 'Error fetching orders' });
       }
       
+      // If no orders found, return empty list with status counts
       if (orders.length === 0) {
         return res.status(200).json({ 
           orders: [],
@@ -198,6 +220,7 @@ router.get('/', isRegularUser, (req, res) => {
         });
       }
       
+      // Get all order items in a single query for better performance
       const orderIds = orders.map(order => order.order_id);
       const itemsQuery = `
         SELECT oi.order_id, oi.order_item_id, oi.game_id, oi.quantity,
@@ -208,6 +231,7 @@ router.get('/', isRegularUser, (req, res) => {
         FROM order_items oi
         LEFT JOIN games g ON oi.game_id = g.game_id
         WHERE oi.order_id IN (?)
+        ORDER BY oi.order_item_id DESC
       `;
       
       db.query(itemsQuery, [orderIds], (err, allItems) => {
@@ -216,6 +240,7 @@ router.get('/', isRegularUser, (req, res) => {
           return res.status(500).json({ message: 'Error fetching order items' });
         }
         
+        // Group items by order ID
         const itemsByOrder = {};
         allItems.forEach(item => {
           if (!itemsByOrder[item.order_id]) {
@@ -230,11 +255,13 @@ router.get('/', isRegularUser, (req, res) => {
           });
         });
         
+        // Add items to each order
         const ordersWithItems = orders.map(order => ({
           ...order,
           items: itemsByOrder[order.order_id] || []
         }));
         
+        // Return orders with items and status counts
         res.status(200).json({ 
           orders: ordersWithItems,
           statusCounts

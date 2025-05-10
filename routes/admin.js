@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { isAuthenticated, isAdmin } = require('../middleware/auth');
+const bcrypt = require('bcrypt');
 
 // Apply authentication and admin checks to all routes
 router.use(isAuthenticated);
@@ -17,11 +18,12 @@ router.use(isAdmin);
 router.post('/games/insert', (req, res) => {
   const { title, description, price, platform, genre, gameicon } = req.body;
   
+  // Make sure we have the required fields
   if (!title || !price || !genre) {
     return res.status(400).json({ message: 'Required fields missing' });
   }
   
-  // Include created_at in the query, setting it to current timestamp
+  // Insert the new game with current timestamp
   const query = `
     INSERT INTO games 
     (title, description, price, platform, genre, gameicon, created_at) 
@@ -40,7 +42,7 @@ router.post('/games/insert', (req, res) => {
       // Get stock quantity or use default of 0
       const stockQuantity = req.body.stock_quantity !== undefined ? req.body.stock_quantity : 0;
       
-      // Always create inventory record with stock quantity (default 0 if not provided)
+      // Create inventory record for the new game
       db.query(
         'INSERT INTO inventory (game_id, stock_quantity) VALUES (?, ?)',
         [result.insertId, stockQuantity],
@@ -69,6 +71,7 @@ router.put('/games/update/:gameId', (req, res) => {
     return res.status(400).json({ message: 'Game ID is required' });
   }
   
+  // Build dynamic update query based on provided fields
   let updateFields = [];
   let queryParams = [];
   
@@ -102,6 +105,7 @@ router.put('/games/update/:gameId', (req, res) => {
     queryParams.push(gameicon);
   }
   
+  // Make sure we have something to update
   if (updateFields.length === 0) {
     return res.status(400).json({ message: 'No fields to update' });
   }
@@ -109,6 +113,7 @@ router.put('/games/update/:gameId', (req, res) => {
   const query = `UPDATE games SET ${updateFields.join(', ')} WHERE game_id = ?`;
   queryParams.push(gameId);
   
+  // Update the game in the database
   db.query(query, queryParams, (err, result) => {
     if (err) {
       console.error('Error updating game:', err);
@@ -154,6 +159,7 @@ router.delete('/games/delete/:gameId', (req, res) => {
         
         const cartCount = cartResults[0].cart_count;
         
+        // Don't delete if the game is in someone's cart
         if (cartCount > 0) {
           return db.rollback(() => {
             res.status(400).json({ 
@@ -164,7 +170,7 @@ router.delete('/games/delete/:gameId', (req, res) => {
           });
         }
         
-        // Check if game exists in active orders (not shipped, delivered or canceled)
+        // Check if game exists in active orders
         const activeOrderQuery = `
           SELECT COUNT(*) as active_order_count 
           FROM order_items oi
@@ -183,6 +189,7 @@ router.delete('/games/delete/:gameId', (req, res) => {
           
           const activeOrderCount = orderResults[0].active_order_count;
           
+          // Don't delete if the game is in active orders
           if (activeOrderCount > 0) {
             return db.rollback(() => {
               res.status(400).json({ 
@@ -211,7 +218,7 @@ router.delete('/games/delete/:gameId', (req, res) => {
                 });
               }
               
-              // Then mark the game as deleted
+              // Do a soft delete by setting is_deleted flag to TRUE
               db.query('UPDATE games SET is_deleted = TRUE WHERE game_id = ?', [gameId], (err, result) => {
                 if (err) {
                   return db.rollback(() => {
@@ -226,6 +233,7 @@ router.delete('/games/delete/:gameId', (req, res) => {
                   });
                 }
                 
+                // Commit all changes if everything went well
                 db.commit((err) => {
                   if (err) {
                     return db.rollback(() => {
@@ -253,11 +261,12 @@ router.delete('/games/delete/:gameId', (req, res) => {
  ********************************************************/
 // Get all inventory with game images
 router.get('/inventory', (req, res) => {
+  // Query to get inventory data with game details
   const query = `
     SELECT i.inventory_id, i.game_id, i.stock_quantity, g.title, g.gameicon
     FROM inventory i
     JOIN games g ON i.game_id = g.game_id
-    ORDER BY g.title
+    ORDER BY i.inventory_id DESC
   `;
   
   db.query(query, (err, results) => {
@@ -278,6 +287,7 @@ router.get('/inventory/:gameId', (req, res) => {
     return res.status(400).json({ message: 'Game ID is required' });
   }
   
+  // Get inventory for a specific game with details
   const query = `
     SELECT i.inventory_id, i.game_id, i.stock_quantity, g.title, g.gameicon
     FROM inventory i
@@ -308,6 +318,7 @@ router.put('/inventory/:gameId', (req, res) => {
     return res.status(400).json({ message: 'Game ID is required' });
   }
   
+  // Make sure stock quantity is valid
   if (stockQuantity === undefined || stockQuantity < 0) {
     return res.status(400).json({ message: 'Valid stock quantity is required' });
   }
@@ -319,7 +330,7 @@ router.put('/inventory/:gameId', (req, res) => {
       return res.status(500).json({ message: 'Error updating inventory' });
     }
     
-    // If inventory exists, update quantity
+    // If inventory exists, update the quantity
     if (results.length > 0) {
       db.query(
         'UPDATE inventory SET stock_quantity = ? WHERE game_id = ?',
@@ -338,7 +349,7 @@ router.put('/inventory/:gameId', (req, res) => {
         }
       );
     } else {
-      // If inventory doesn't exist, create new record
+      // If inventory doesn't exist, create a new record
       db.query(
         'INSERT INTO inventory (game_id, stock_quantity) VALUES (?, ?)',
         [gameId, stockQuantity],
@@ -364,12 +375,13 @@ router.put('/inventory/:gameId', (req, res) => {
  ********************************************************/
 // Get all orders with details including items
 router.get('/orders', (req, res) => {
+  // Get all orders with user details
   const query = `
     SELECT o.order_id, o.user_id, o.order_date, o.status, o.total_amount, 
            u.username, u.email
     FROM orders o
     JOIN users u ON o.user_id = u.user_id
-    ORDER BY o.order_date DESC
+    ORDER BY o.order_id DESC
   `;
   
   db.query(query, (err, results) => {
@@ -385,13 +397,14 @@ router.get('/orders', (req, res) => {
     // Get all order IDs to fetch their items
     const orderIds = results.map(order => order.order_id);
     
-    // Get items for all orders in a single query
+    // Get items for all orders in a single query (more efficient)
     const itemsQuery = `
       SELECT oi.order_id, oi.order_item_id, oi.game_id, oi.quantity, g.price,
              g.title, g.gameicon 
       FROM order_items oi
       JOIN games g ON oi.game_id = g.game_id
       WHERE oi.order_id IN (?)
+      ORDER BY oi.order_item_id DESC
     `;
     
     db.query(itemsQuery, [orderIds], (err, itemResults) => {
@@ -400,7 +413,7 @@ router.get('/orders', (req, res) => {
         return res.status(500).json({ message: 'Error fetching order items' });
       }
       
-      // Organize items by order_id
+      // Organize items by order_id for efficient lookup
       const itemsByOrder = {};
       itemResults.forEach(item => {
         if (!itemsByOrder[item.order_id]) {
@@ -433,7 +446,7 @@ router.put('/orders/:orderId/status', (req, res) => {
     return res.status(400).json({ message: 'Status is required' });
   }
   
-  // Validate status value
+  // Make sure the status value is valid
   const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'canceled'];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ 
@@ -442,6 +455,7 @@ router.put('/orders/:orderId/status', (req, res) => {
     });
   }
   
+  // Update the order status
   const query = 'UPDATE orders SET status = ? WHERE order_id = ?';
   
   db.query(query, [status, orderId], (err, result) => {
@@ -470,7 +484,7 @@ router.delete('/orders/:orderId', (req, res) => {
     return res.status(400).json({ message: 'Order ID is required' });
   }
   
-  // Start a transaction
+  // Start a transaction to ensure data integrity
   db.beginTransaction(err => {
     if (err) {
       console.error('Error starting transaction:', err);
@@ -492,7 +506,7 @@ router.delete('/orders/:orderId', (req, res) => {
         });
       }
       
-      // First, delete payment records
+      // Delete related payment records first
       db.query('DELETE FROM payments WHERE order_id = ?', [orderId], (err) => {
         if (err) {
           return db.rollback(() => {
@@ -509,8 +523,7 @@ router.delete('/orders/:orderId', (req, res) => {
               res.status(500).json({ message: 'Error deleting order' });
             });
           }
-          
-          // Finally delete the order itself
+            // Finally delete the order itself
           db.query('DELETE FROM orders WHERE order_id = ?', [orderId], (err, result) => {
             if (err) {
               return db.rollback(() => {
@@ -519,7 +532,7 @@ router.delete('/orders/:orderId', (req, res) => {
               });
             }
             
-            // Commit transaction
+            // Commit the transaction if everything succeeded
             db.commit(err => {
               if (err) {
                 return db.rollback(() => {
@@ -545,10 +558,11 @@ router.delete('/orders/:orderId', (req, res) => {
  ********************************************************/
 // Get all users
 router.get('/users', (req, res) => {
+  // Get all users (excluding password field)
   const query = `
     SELECT user_id, username, email, created_at, role
     FROM users
-    ORDER BY username
+    ORDER BY user_id DESC
   `;
   
   db.query(query, (err, results) => {
@@ -569,6 +583,7 @@ router.get('/users/:userId', (req, res) => {
     return res.status(400).json({ message: 'User ID is required' });
   }
   
+  // Get user details (excluding password)
   const query = `
     SELECT user_id, username, email, created_at, role
     FROM users
@@ -613,7 +628,7 @@ router.put('/users/:userId', (req, res) => {
   }
   
   if (role) {
-    // Validate role value
+    // Make sure role is valid
     const validRoles = ['user', 'admin'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({ 
@@ -625,6 +640,7 @@ router.put('/users/:userId', (req, res) => {
     queryParams.push(role);
   }
   
+  // Make sure we have something to update
   if (updateFields.length === 0) {
     return res.status(400).json({ message: 'No fields to update' });
   }
@@ -632,6 +648,7 @@ router.put('/users/:userId', (req, res) => {
   const query = `UPDATE users SET ${updateFields.join(', ')} WHERE user_id = ?`;
   queryParams.push(userId);
   
+  // Update the user in the database
   db.query(query, queryParams, (err, result) => {
     if (err) {
       console.error('Error updating user:', err);
@@ -658,12 +675,12 @@ router.put('/users/:userId/password', (req, res) => {
     return res.status(400).json({ message: 'User ID is required' });
   }
   
+  // Validate password strength
   if (!newPassword || newPassword.length < 6) {
     return res.status(400).json({ message: 'Valid password is required (minimum 6 characters)' });
   }
   
-  // Hash the new password (you should import bcrypt at the top of the file)
-  const bcrypt = require('bcrypt');
+  // Hash the new password for security
   const saltRounds = 10;
   
   bcrypt.hash(newPassword, saltRounds, (err, hash) => {
@@ -672,6 +689,7 @@ router.put('/users/:userId/password', (req, res) => {
       return res.status(500).json({ message: 'Error changing password' });
     }
     
+    // Update the password in the database
     const query = 'UPDATE users SET password = ? WHERE user_id = ?';
     
     db.query(query, [hash, userId], (err, result) => {
@@ -705,14 +723,14 @@ router.delete('/users/:userId', (req, res) => {
     return res.status(400).json({ message: 'Cannot delete your own account' });
   }
   
-  // Start a transaction to ensure atomicity
+  // Start a transaction to ensure data integrity
   db.beginTransaction(err => {
     if (err) {
       console.error('Error starting transaction:', err);
       return res.status(500).json({ message: 'Error deleting user' });
     }
     
-    // Check if user has orders
+    // Check if user has orders - we can't delete users with order history
     db.query('SELECT COUNT(*) as order_count FROM orders WHERE user_id = ?', 
       [userId], 
       (err, orderResults) => {
@@ -732,7 +750,7 @@ router.delete('/users/:userId', (req, res) => {
           });
         }
         
-        // Delete user's cart items
+        // Delete user's cart items first
         db.query('DELETE FROM cart WHERE user_id = ?', [userId], (err) => {
           if (err) {
             return db.rollback(() => {
@@ -741,7 +759,7 @@ router.delete('/users/:userId', (req, res) => {
             });
           }
           
-          // Delete the user
+          // Finally delete the user
           db.query('DELETE FROM users WHERE user_id = ?', [userId], (err, result) => {
             if (err) {
               return db.rollback(() => {
@@ -756,7 +774,7 @@ router.delete('/users/:userId', (req, res) => {
               });
             }
             
-            // Commit the transaction
+            // Commit the transaction if everything succeeded
             db.commit(err => {
               if (err) {
                 return db.rollback(() => {

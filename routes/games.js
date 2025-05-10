@@ -6,13 +6,15 @@ const router = express.Router();
 const db = require('../db');
 const { isAuthenticated } = require('../middleware/auth');
 
+// Make sure user is logged in to access games
 router.use(isAuthenticated);
 
 /********************************************************
  * GET ALL GAMES
  ********************************************************/
 router.get('/', (req, res) => {
-  db.query('SELECT * FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL', (err, results) => {
+  // Get all active games (not deleted) in descending order by ID
+  db.query('SELECT * FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL ORDER BY game_id DESC', (err, results) => {
     if (err) {
       res.status(500).send('Error fetching data');
     } else {
@@ -26,7 +28,9 @@ router.get('/', (req, res) => {
  ********************************************************/
 router.get('/filter', (req, res) => {
   const { genre } = req.query;
-  db.query('SELECT * FROM games WHERE genre = ? AND (is_deleted = FALSE OR is_deleted IS NULL)', [genre], (err, results) => {
+  
+  // Get games by genre and make sure they're not deleted, order by ID DESC
+  db.query('SELECT * FROM games WHERE genre = ? AND (is_deleted = FALSE OR is_deleted IS NULL) ORDER BY game_id DESC', [genre], (err, results) => {
     if (err) {
       res.status(500).send('Error fetching data');
     } else {
@@ -39,7 +43,8 @@ router.get('/filter', (req, res) => {
  * GET ALL GENRES
  ********************************************************/
 router.get('/genres', (req, res) => {
-  db.query('SELECT DISTINCT genre FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL', (err, results) => {
+  // Get distinct genres for filtering options
+  db.query('SELECT DISTINCT genre FROM games WHERE is_deleted = FALSE OR is_deleted IS NULL ORDER BY genre DESC', (err, results) => {
     if (err) {
       res.status(500).send('Error fetching genre data');
     } else {
@@ -54,11 +59,13 @@ router.get('/genres', (req, res) => {
 router.get('/search', (req, res) => {
   const { title } = req.query;
   
+  // Make sure we have a search term
   if (!title) {
     return res.status(400).json({ error: 'Search term is required' });
   }
   
-  const searchQuery = `SELECT * FROM games WHERE title LIKE ? AND (is_deleted = FALSE OR is_deleted IS NULL)`;
+  // Search games by title (case-insensitive) and order by ID DESC
+  const searchQuery = `SELECT * FROM games WHERE title LIKE ? AND (is_deleted = FALSE OR is_deleted IS NULL) ORDER BY game_id DESC`;
   db.query(searchQuery, [`%${title}%`], (err, results) => {
     if (err) {
       console.error('Search error:', err);
@@ -74,6 +81,7 @@ router.get('/search', (req, res) => {
 router.get('/:gameId', (req, res) => {
   const { gameId } = req.params;
   
+  // Get game details including stock info
   const query = `
     SELECT games.*, inventory.stock_quantity 
     FROM games 
@@ -87,10 +95,12 @@ router.get('/:gameId', (req, res) => {
       return res.status(500).send('Error fetching game details');
     }
     
+    // No game found with this ID
     if (results.length === 0) {
       return res.status(404).json({ error: 'Game not found' });
     }
     
+    // Return the game details
     res.json(results[0]);
   });
 });

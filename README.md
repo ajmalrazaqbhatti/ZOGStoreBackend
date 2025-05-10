@@ -111,7 +111,6 @@ The application implements centralized error handling with:
 
 - Order Management
   - `GET /admin/orders` - Get all orders with details
-  - `GET /admin/orders/search` - Search orders (orderId, customer name)
   - `PUT /admin/orders/:orderId/status` - Update order status
   - `DELETE /admin/orders/:orderId` - Delete an order
 

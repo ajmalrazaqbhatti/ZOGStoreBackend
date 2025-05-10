@@ -88,7 +88,6 @@ The application implements centralized error handling with:
 - `POST /cart/add` - Add item to cart
 - `POST /cart/update` - Update cart item quantity
 - `POST /cart/remove` - Remove cart item
-- `DELETE /cart` - Clear cart
 
 ### Orders API (Regular Users Only)
 - `POST /orders/create` - Create a new order

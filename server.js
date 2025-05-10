@@ -43,8 +43,6 @@ app.use(session({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Removed debugging middleware
-
 /********************************************************
  * ROUTES
  ********************************************************/

@@ -2,7 +2,6 @@
  * AUTHENTICATION MIDDLEWARE
  ********************************************************/
 const isAuthenticated = (req, res, next) => {
-  // Check if user is logged in
   if (req.session && req.session.isAuthenticated) {
     return next();
   }
@@ -10,7 +9,6 @@ const isAuthenticated = (req, res, next) => {
 };
 
 const isAdmin = (req, res, next) => {
-  // Check if user is authenticated and has admin role
   if (req.session && req.session.isAuthenticated && req.session.user.role === 'admin') {
     return next();
   }

@@ -59,6 +59,7 @@ Backend server for the ZOG Game Store application - a full-featured e-commerce p
 
 - User Management
   - `GET /admin/users` - Get all users
+  - `GET /admin/users/search?query=X` - Search users by username or email
   - `PUT /admin/users/:userId` - Update user information
   - `PUT /admin/users/:userId/password` - Update user password
   - `DELETE /admin/users/:userId` - Delete a user

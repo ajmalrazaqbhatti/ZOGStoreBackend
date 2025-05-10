@@ -526,6 +526,34 @@ router.delete('/orders/:orderId', (req, res) => {
 /********************************************************
  * USER MANAGEMENT (ADMIN ONLY)
  ********************************************************/
+// Search users by username or email
+router.get('/users/search', (req, res) => {
+  const { query } = req.query;
+  
+  if (!query || query.trim() === '') {
+    return res.status(400).json({ message: 'Search query is required' });
+  }
+  
+  // Search users by username or email using LIKE for partial matching
+  const searchQuery = `
+    SELECT user_id, username, email, created_at, role
+    FROM users
+    WHERE username LIKE ? OR email LIKE ?
+    ORDER BY user_id DESC
+  `;
+  
+  const searchParam = `%${query}%`;
+  
+  db.query(searchQuery, [searchParam, searchParam], (err, results) => {
+    if (err) {
+      console.error('Error searching users:', err);
+      return res.status(500).json({ message: 'Error searching users' });
+    }
+    
+    return res.status(200).json(results);
+  });
+});
+
 // Get all users
 router.get('/users', (req, res) => {
   // Get all users (excluding password field)
@@ -617,8 +645,8 @@ router.put('/users/:userId/password', (req, res) => {
   }
   
   // Validate password strength
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ message: 'Valid password is required (minimum 6 characters)' });
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ message: 'Valid password is required (minimum 8 characters)' });
   }
   
   // Hash the new password for security

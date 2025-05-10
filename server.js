@@ -43,12 +43,7 @@ app.use(session({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Simple request logger
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - Request received`);
-  console.log('Request body:', req.body);
-  next();
-});
+// Removed debugging middleware
 
 /********************************************************
  * ROUTES
@@ -66,6 +61,4 @@ app.use('/admin', adminRoutes);
  ********************************************************/
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
-  console.log(`Games endpoint: http://localhost:${port}/games`);
-  console.log(`Signup endpoint: http://localhost:${port}/signup (POST)`);
 });

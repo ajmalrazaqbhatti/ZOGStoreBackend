@@ -37,10 +37,12 @@ ZOGStoreBackend/
 ### Authentication Flow
 
 1. **Registration**: Users register with username, email, and password
+
    - Passwords are hashed with bcrypt before storage
    - Default role is "user"
 
 2. **Login**: Users authenticate with email/username and password
+
    - On successful login, a session is created
    - Session contains user ID and role
 
@@ -63,6 +65,7 @@ The application uses a relational database with the following main tables:
 ### Error Handling
 
 The application implements centralized error handling with:
+
 - Appropriate HTTP status codes
 - Consistent error response format
 - Detailed logging for troubleshooting
@@ -70,19 +73,22 @@ The application implements centralized error handling with:
 ## API Endpoints
 
 ### Games API (Public Access with Authentication)
+
 - `GET /games` - Get all games
 - `GET /games/filter?genre=X` - Filter games by genre
 - `GET /games/genres` - Get all genres
-- `GET /games/search?title=X` - Search games by title
-- `GET /games/:gameId` - Get specific game details
+- `GET /games/search?title=X` - Search games by title (includes inventory stock information)
+- `GET /games/game?gameId=X` - Get specific game details
 
 ### Auth API
+
 - `POST /auth/signup` - Register a new user
 - `POST /auth/login` - Login user
 - `GET /auth/logout` - Logout user
 - `GET /auth/status` - Check authentication status
 
 ### Cart API (Regular Users Only)
+
 - `GET /cart` - Get cart items
 - `GET /cart/count` - Get cart item count
 - `POST /cart/add` - Add item to cart
@@ -90,37 +96,45 @@ The application implements centralized error handling with:
 - `POST /cart/remove` - Remove cart item
 
 ### Orders API (Regular Users Only)
+
 - `POST /orders/create` - Create a new order
 - `GET /orders` - Get user orders
-- `GET /orders/search` - Search orders with filters (orderId, date range, game title, status)
+- `GET /orders/search?orderId=X` - Search order by ID
 
 ### Dashboard API (Admin Only)
+
 - `GET /dashboard/stats` - Get overall statistics (users, games, orders, sales)
 - `GET /dashboard/top-games?limit=X` - Get top selling games
 
 ### Admin API (Admin Only)
+
 - Game Management
+
   - `POST /admin/games/insert` - Add a new game
-  - `PUT /admin/games/update/:gameId` - Update game details
-  - `DELETE /admin/games/delete/:gameId` - Delete a game
+  - `PUT /admin/games/update?gameId=X` - Update game details
+  - `DELETE /admin/games/delete?gameId=X` - Delete a game
 
 - Inventory Management
+
   - `GET /admin/inventory` - Get all inventory
-  - `PUT /admin/inventory/:gameId` - Update game inventory
+  - `PUT /admin/inventory?gameId=X` - Update game inventory
 
 - Order Management
+
   - `GET /admin/orders` - Get all orders with details
-  - `PUT /admin/orders/:orderId/status` - Update order status
-  - `DELETE /admin/orders/:orderId` - Delete an order
+  - `GET /admin/orders/search?orderId=X` - Search for an order by ID
+  - `PUT /admin/orders/status?orderId=X` - Update order status
+  - `DELETE /admin/orders?orderId=X` - Delete an order
 
 - User Management
   - `GET /admin/users` - Get all users
   - `GET /admin/users/search?query=X` - Search users by username or email
-  - `PUT /admin/users/:userId` - Update user information
-  - `PUT /admin/users/:userId/password` - Update user password
-  - `DELETE /admin/users/:userId` - Delete a user
+  - `PUT /admin/users?userId=X` - Update user information
+  - `PUT /admin/users/password?userId=X` - Update user password
+  - `DELETE /admin/users?userId=X` - Delete a user
 
 ## Role-Based Access
+
 - Regular Users: Can browse games, add to cart, place orders, and view order history
 - Admin Users: Can access dashboard, manage games, inventory, orders, and user roles
 
@@ -151,6 +165,7 @@ The application implements centralized error handling with:
    ```
 
 ## Technologies Used
+
 - Node.js
 - Express.js
 - MySQL

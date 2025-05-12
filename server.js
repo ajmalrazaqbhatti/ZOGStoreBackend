@@ -51,7 +51,8 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: true, // Enable secure cookies for production
+      sameSite: "none", // Allow cross-site cookies
       maxAge: 1200000, // 20 minutes session timeout
     },
   })

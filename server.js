@@ -22,24 +22,10 @@ const port = process.env.PORT || 3000;
  * MIDDLEWARE CONFIGURATION
  ********************************************************/
 // Setup CORS to allow our frontend to communicate with the API
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://zog-store-ui.vercel.app",
-];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   })
 );
@@ -51,8 +37,7 @@ app.use(
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: true, // Enable secure cookies for production
-      sameSite: "none", // Allow cross-site cookies
+      secure: process.env.NODE_ENV === "production",
       maxAge: 1200000, // 20 minutes session timeout
     },
   })

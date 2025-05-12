@@ -78,7 +78,7 @@ The application implements centralized error handling with:
 - `GET /games/filter?genre=X` - Filter games by genre
 - `GET /games/genres` - Get all genres
 - `GET /games/search?title=X` - Search games by title (includes inventory stock information)
-- `GET /games/:gameId` - Get specific game details
+- `GET /games/game?gameId=X` - Get specific game details
 
 ### Auth API
 
@@ -111,27 +111,27 @@ The application implements centralized error handling with:
 - Game Management
 
   - `POST /admin/games/insert` - Add a new game
-  - `PUT /admin/games/update/:gameId` - Update game details
-  - `DELETE /admin/games/delete/:gameId` - Delete a game
+  - `PUT /admin/games/update?gameId=X` - Update game details
+  - `DELETE /admin/games/delete?gameId=X` - Delete a game
 
 - Inventory Management
 
   - `GET /admin/inventory` - Get all inventory
-  - `PUT /admin/inventory/:gameId` - Update game inventory
+  - `PUT /admin/inventory?gameId=X` - Update game inventory
 
 - Order Management
 
   - `GET /admin/orders` - Get all orders with details
   - `GET /admin/orders/search?orderId=X` - Search for an order by ID
-  - `PUT /admin/orders/:orderId/status` - Update order status
-  - `DELETE /admin/orders/:orderId` - Delete an order
+  - `PUT /admin/orders/status?orderId=X` - Update order status
+  - `DELETE /admin/orders?orderId=X` - Delete an order
 
 - User Management
   - `GET /admin/users` - Get all users
   - `GET /admin/users/search?query=X` - Search users by username or email
-  - `PUT /admin/users/:userId` - Update user information
-  - `PUT /admin/users/:userId/password` - Update user password
-  - `DELETE /admin/users/:userId` - Delete a user
+  - `PUT /admin/users?userId=X` - Update user information
+  - `PUT /admin/users/password?userId=X` - Update user password
+  - `DELETE /admin/users?userId=X` - Delete a user
 
 ## Role-Based Access
 

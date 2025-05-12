@@ -22,12 +22,26 @@ const port = process.env.PORT || 3000;
  * MIDDLEWARE CONFIGURATION
  ********************************************************/
 // Setup CORS to allow our frontend to communicate with the API
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://zog-store-ui.vercel.app",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-  }),
+  })
 );
 
 // Set up sessions for user login state
@@ -40,38 +54,12 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       maxAge: 1200000, // 20 minutes session timeout
     },
-  }),
+  })
 );
 
 // Parse JSON and URL-encoded data
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(
-    `[${new Date().toISOString()}] INCOMING REQUEST: ${req.method} ${req.url}`,
-  );
-  console.log(`Request Body:`, req.body);
-  console.log(`Request Query:`, req.query);
-  next();
-});
-
-// Response logging middleware
-app.use((req, res, next) => {
-  const originalSend = res.send;
-
-  res.send = function (body) {
-    console.log(
-      `[${new Date().toISOString()}] OUTGOING RESPONSE: ${res.statusCode} for ${
-        req.method
-      } ${req.url}`,
-    );
-    return originalSend.call(this, body);
-  };
-
-  next();
-});
 
 /********************************************************
  * ROUTES

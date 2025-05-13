@@ -27,7 +27,7 @@ app.use(
     origin: "http://localhost:5173",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
-  })
+  }),
 );
 
 // Set up sessions for user login state
@@ -40,7 +40,7 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       maxAge: 1200000, // 20 minutes session timeout
     },
-  })
+  }),
 );
 
 // Parse JSON and URL-encoded data

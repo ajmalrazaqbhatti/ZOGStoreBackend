@@ -1,10 +1,10 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const db = require("../db");
-const { isAuthenticated, isRegularUser } = require("../middleware/auth");
+import db from "../db.js";
+import { isAuthenticated, isRegularUser } from "../middleware/auth.js";
 
 router.use(isAuthenticated);
 
@@ -64,7 +64,7 @@ router.post("/create", isRegularUser, (req, res) => {
 
       const totalAmount = cartItems.reduce(
         (sum, item) => sum + item.price * item.quantity,
-        0,
+        0
       );
 
       db.query(
@@ -137,13 +137,13 @@ router.post("/create", isRegularUser, (req, res) => {
                           paymentStatus: "Pending",
                         });
                       });
-                    },
+                    }
                   );
-                },
+                }
               );
-            },
+            }
           );
-        },
+        }
       );
     });
   });
@@ -328,4 +328,4 @@ router.get("/search", isRegularUser, (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

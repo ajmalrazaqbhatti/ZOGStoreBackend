@@ -1,10 +1,10 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
+import db from "../db.js";
+import { isAuthenticated, isRegularUser } from "../middleware/auth.js";
 const router = express.Router();
-const db = require("../db");
-const { isAuthenticated, isRegularUser } = require("../middleware/auth");
 
 router.use(isAuthenticated);
 router.use(isRegularUser);
@@ -125,12 +125,12 @@ router.post("/add", (req, res) => {
                   quantity: quantity,
                   availableQuantity: availableQuantity,
                 });
-              },
+              }
             );
           }
-        },
+        }
       );
-    },
+    }
   );
 });
 
@@ -199,9 +199,9 @@ router.post("/update", (req, res) => {
             quantity: quantity,
             availableQuantity: availableQuantity,
           });
-        },
+        }
       );
-    },
+    }
   );
 });
 
@@ -244,10 +244,10 @@ router.post("/remove", (req, res) => {
             message: "Item removed from cart",
             cartId: cartId,
           });
-        },
+        }
       );
-    },
+    }
   );
 });
 
-module.exports = router;
+export default router;

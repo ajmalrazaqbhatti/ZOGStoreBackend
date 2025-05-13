@@ -1,10 +1,11 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
+import db from "../db.js";
+import { isAuthenticated } from "../middleware/auth.js";
+
 const router = express.Router();
-const db = require("../db");
-const { isAuthenticated } = require("../middleware/auth");
 
 router.use(isAuthenticated);
 
@@ -20,7 +21,7 @@ router.get("/", (req, res) => {
       } else {
         res.json(results);
       }
-    },
+    }
   );
 });
 
@@ -39,7 +40,7 @@ router.get("/filter", (req, res) => {
       } else {
         res.json(results);
       }
-    },
+    }
   );
 });
 
@@ -55,7 +56,7 @@ router.get("/genres", (req, res) => {
       } else {
         res.json(results);
       }
-    },
+    }
   );
 });
 
@@ -111,4 +112,4 @@ router.get("/game", (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

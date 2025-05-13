@@ -1,10 +1,11 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
+import bcrypt from "bcrypt";
+import db from "../db.js";
+
 const router = express.Router();
-const bcrypt = require("bcrypt");
-const db = require("../db");
 
 /********************************************************
  * USER SIGNUP
@@ -36,9 +37,9 @@ router.post("/signup", async (req, res) => {
               message: "User registered successfully",
               userId: result.insertId,
             });
-          },
+          }
         );
-      },
+      }
     );
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -96,7 +97,7 @@ router.post("/login", async (req, res) => {
           sessionId: req.sessionID,
           isAuthenticated: req.session ? req.session.isAuthenticated : false,
         });
-      },
+      }
     );
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -137,4 +138,4 @@ router.get("/status", (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

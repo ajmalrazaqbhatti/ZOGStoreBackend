@@ -1,11 +1,12 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
+import db from "../db.js";
+import { isAuthenticated, isAdmin } from "../middleware/auth.js";
+import bcrypt from "bcrypt";
+
 const router = express.Router();
-const db = require("../db");
-const { isAuthenticated, isAdmin } = require("../middleware/auth");
-const bcrypt = require("bcrypt");
 
 router.use(isAuthenticated);
 router.use(isAdmin);
@@ -50,9 +51,9 @@ router.post("/games/insert", (req, res) => {
             gameId: result.insertId,
             stockQuantity: stockQuantity,
           });
-        },
+        }
       );
-    },
+    }
   );
 });
 
@@ -230,13 +231,13 @@ router.delete("/games/delete", (req, res) => {
                         gameId: gameId,
                       });
                     });
-                  },
+                  }
                 );
-              },
+              }
             );
           });
         });
-      },
+      }
     );
   });
 });
@@ -299,7 +300,7 @@ router.put("/inventory", (req, res) => {
               gameId: gameId,
               stockQuantity: stockQuantity,
             });
-          },
+          }
         );
       } else {
         db.query(
@@ -317,10 +318,10 @@ router.put("/inventory", (req, res) => {
               gameId: gameId,
               stockQuantity: stockQuantity,
             });
-          },
+          }
         );
       }
-    },
+    }
   );
 });
 
@@ -548,13 +549,13 @@ router.delete("/orders", (req, res) => {
                         orderId: orderId,
                       });
                     });
-                  },
+                  }
                 );
-              },
+              }
             );
-          },
+          }
         );
-      },
+      }
     );
   });
 });
@@ -769,12 +770,12 @@ router.delete("/users", (req, res) => {
                   userId: userId,
                 });
               });
-            },
+            }
           );
         });
-      },
+      }
     );
   });
 });
 
-module.exports = router;
+export default router;

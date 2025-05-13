@@ -1,10 +1,10 @@
 /********************************************************
  * IMPORTS & SETUP
  ********************************************************/
-const express = require("express");
+import express from "express";
 const router = express.Router();
-const db = require("../db");
-const { isAuthenticated, isAdmin } = require("../middleware/auth");
+import db from "../db.js";
+import { isAuthenticated, isAdmin } from "../middleware/auth.js";
 
 router.use(isAuthenticated);
 router.use(isAdmin);
@@ -61,7 +61,7 @@ router.get("/stats", (req, res) => {
 
       stats.totalSales = results[0].totalSales || 0;
       checkComplete();
-    },
+    }
   );
 
   db.query(
@@ -75,7 +75,7 @@ router.get("/stats", (req, res) => {
 
       stats.recentOrders = results;
       checkComplete();
-    },
+    }
   );
 
   db.query(
@@ -89,7 +89,7 @@ router.get("/stats", (req, res) => {
 
       stats.paymentMethodStats = results;
       checkComplete();
-    },
+    }
   );
 
   function checkComplete() {
@@ -128,4 +128,4 @@ router.get("/top-games", (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

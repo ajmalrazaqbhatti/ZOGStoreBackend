@@ -30,8 +30,4 @@ const isRegularUser = (req, res, next) => {
   res.status(403).json({ message: "Regular user privileges required" });
 };
 
-module.exports = {
-  isAuthenticated,
-  isAdmin,
-  isRegularUser,
-};
+export { isAuthenticated, isAdmin, isRegularUser };
